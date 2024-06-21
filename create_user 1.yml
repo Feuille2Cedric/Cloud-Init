@@ -1,0 +1,43 @@
+# Source : https://aws.amazon.com/fr/premiumsupport/knowledge-center/execute-user-data-ec2/
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+Content-Type: text/cloud-config; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="cloud-config.txt"
+
+#cloud-config
+cloud_final_modules:
+- [scripts-user, always]
+
+--//
+Content-Type: text/x-shellscript; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="userdata.txt"
+
+#!/bin/bash -e
+
+log_msg () {
+    echo "`date -u '+%F %T'` (UTC) $@ " >>  /var/log/user-data.log
+}
+
+cmd_log () {
+    $@ 2>> /var/log/user-data.log
+}
+
+distrib=$(grep PRETTY_NAME /etc/os-release | cut -d\" -f2)
+localUser="serial-console"
+password=""
+cryptPassword=$(openssl passwd -1 $password)
+
+if [[ $distrib = Debian\ GNU/Linux* ]]; then
+    log_msg "Add user with passwd to group 'adm'."
+    useradd $localUser -m -s /bin/bash -p $cryptPassword -G adm,dialout,cdrom,floppy,sudo,audio,dip,video,plugdev,netdev 2>> /var/log/user-data.log
+elif [[ $distrib = Amazon\ Linux* ]] || [[ $distrib = Red\ Hat* ]]; then
+    log_msg "Add user with passwd to group wheel."
+    useradd $localUser -p $cryptPassword -G wheel 2>> /var/log/user-data.log
+fi
+--//--
